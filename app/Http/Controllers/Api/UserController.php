@@ -7,6 +7,7 @@ use App\Models\UserDetails;
 use App\Models\Education;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use App\Service\UserService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -21,88 +22,30 @@ class UserController extends Controller
      * @param Request $request
      * @return User 
      */
+    protected $userService;
+     public function __construct(UserService $userService){
+$this ->userService = $userService;
+     }
     public function registerUser(Request $request)
     {
-        try {
-            $validateUser = Validator::make($request->all(), [
-                'first_name' => 'required',
-                'last_name' => 'required',
-                'password' => 'required',
-                'role' => 'required',
-            ]);
-    
-            if ($validateUser->fails()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'validation error',
-                    'errors' => $validateUser->errors()
-                ], 401);
-            }
-    
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $image = $request->file('image');
-                $imageName = Str::random(20) . '.' . $image->getClientOriginalExtension();
-                $imagePath = $image->storeAs('images', $imageName, 'public');
-            }
-    
-            $userData = [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
-                'password' => Hash::make($request->password),
-                'role' => $request->role,
-                'image' => $imagePath,
-            ];
-    
-            if ($request->has('email')) {
-                $validateUserEmail = Validator::make($request->all(), [
-                    'email' => 'required|email|unique:users,email',
-                ]);
-    
-                if ($validateUserEmail->fails()) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'validation error',
-                        'errors' => $validateUserEmail->errors()
-                    ], 401);
-                }
-    
-                $userData['email'] = $request->email;
-            } elseif ($request->has('phone_num')) {
-                $validateUserPhone = Validator::make($request->all(), [
-                    'phone_num' => 'required|unique:users',
-                ]);
-    
-                if ($validateUserPhone->fails()) {
-                    return response()->json([
-                        'status' => false,
-                        'message' => 'validation error',
-                        'errors' => $validateUserPhone->errors()
-                    ], 401);
-                }
-    
-                $userData['phone_num'] = $request->phone_num;
-            } else {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Either email or phone number is required'
-                ], 400);
-            }
-    
-            $user = User::create($userData);
-    
+        $data = $request->all();
+        $result = $this->userService->registerUser($data);
+
+        if ($result['status']) {
             return response()->json([
                 'status' => true,
-                'message' => 'User Registerd Successfully',
-                'token' => $user->createToken("API TOKEN")->plainTextToken
+                'message' => $result['message'],
+                'token' => $result['token']
             ], 200);
-        } catch (\Throwable $th) {
+        } else {
             return response()->json([
                 'status' => false,
-                'message' => $th->getMessage()
-            ], 500);
+                'message' => $result['message'],
+                'errors' => $result['errors'] ?? null
+            ], 401);
         }
-    } 
+    }
+
     public function loginUser(Request $request)
     {
         try {
@@ -378,3 +321,4 @@ public function deleteUser($id)
     }
 }
 }
+

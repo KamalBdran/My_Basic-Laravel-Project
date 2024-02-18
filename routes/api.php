@@ -45,8 +45,6 @@ use Illuminate\Support\Facades\Route;
     Route::get('/user/getpharorders', [OrderController::class,'getPharOrders']);
     Route::post('/user/updateorders/{orderId}', [OrderController::class,'updateOrderStatus']);
 
-
-
 });
 //auth routes
 Route::post('/auth/register', [UserController::class, 'registerUser']);
